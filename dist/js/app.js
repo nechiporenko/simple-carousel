@@ -1,7 +1,7 @@
 /*!
  * simple-carousel
  * @author: nechiporenko
- * @version: 1.0.3
+ * @version: 1.0.4
  * Copyright 2017.
  */
 
@@ -17,9 +17,11 @@
             this.delay = this.slider.getAttribute('data-time');//время смены слайдов
             this.mode = this.slider.getAttribute('data-mode'); //режим (вертикальный - vertical, горизонтальный - horizontal )
             this.current = 0; //текущий слайд
+            this.handle = {}; //будем хранить состояние слайдера (запущен - остановлен)
         };
 
         method.prototype.init = function () {
+            this.handle.isStarted = false; //флаг состояния
             //проверим переданные параметры
             if (isNaN(this.size)) {//если не указали высоту (или ширину) слайда
                 this.size = 100;
@@ -37,18 +39,41 @@
             var last = this.slides[this.count - 1];
             this.slider.insertBefore(last, this.slides[0]);
 
-            if (this.mode === 'horizontal') {
+            if (this.mode === 'horizontal') { //если слайдер - горизонтальный
                 //сместим список влево на ширину элемента
                 this.slider.style.left = -this.size + 'px';
                 //зададим ширину списка по кол-ву элементов
                 this.slider.style.width = this.size * this.count + 'px';
-            } else {
+            } else { //если слайдер - вертикальный
                 //сместим список на высоту элемента
                 this.slider.style.top = -this.size + 'px';
             }
 
-            //теперь запускаем с интервалом delay
-            setInterval(this.move.bind(this), this.delay);
+            this.start(); //запускаем
+            this.hover(); //подключаем события hover
+        };
+
+        method.prototype.start = function () {//старт автоматической прокрутки слайдов
+            if (!this.handle.isStarted) {
+                this.handle.isStarted = true;
+                this.handle.timer = setInterval(this.move.bind(this), this.delay);//запускаем с интервалом delay
+            }
+        };
+
+        method.prototype.stop = function () {//остановим автоматическую прокрутку слайдов
+            if (this.handle.isStarted) {
+                this.handle.isStarted = false;
+                clearTimeout(this.handle.timer);
+            }
+        };
+
+        method.prototype.hover = function () {//будем останавливать авт.прокрутку при наведении мыши
+            this.slider.addEventListener('mouseover', function () {
+                this.stop();
+            }.bind(this));
+            this.slider.addEventListener('mouseout', function () {
+                this.start();
+            }.bind(this));
         };
 
         method.prototype.move = function () {
@@ -87,7 +112,7 @@
             el.className = el.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
     }
 
-
+    //--------------------------------------------------------------------------------------------------------------------------
     //подключаем слайдеры на странице, параметры передаем через data-атрибуты (см. html-разметку)
     var slider1 = new Carousel(document.getElementById('crsl01'));
     slider1.init();
