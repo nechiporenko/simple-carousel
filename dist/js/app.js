@@ -1,10 +1,9 @@
 /*!
  * simple-carousel
- * @author: Avakandy
- * @version: 0.0.2
+ * @author: nechiporenko
+ * @version: 1.0.3
  * Copyright 2017.
  */
-
 
 (function () {
     'use strict';
@@ -79,14 +78,14 @@
             el.classList.add(className);
         else
             el.className += ' ' + className;
-    };
+    }
 
     function removeClass(el, className) {
         if (el.classList)
             el.classList.remove(className);
         else
             el.className = el.className.replace(new RegExp('(^|\\b)' + className.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
-    };
+    }
 
 
     //подключаем слайдеры на странице, параметры передаем через data-атрибуты (см. html-разметку)

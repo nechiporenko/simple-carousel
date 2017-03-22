@@ -1,37 +1,263 @@
 module.exports = function(grunt) {
-	require('time-grunt')(grunt);
-	require('load-grunt-tasks')(grunt);
-	
-	grunt.initConfig({
-		pkg: grunt.file.readJSON('package.json'),//будем брать данные для баннеров отсюда
-		
-		watch: {//отслеживаем изменения в файлах
-			sass: {
-				files: ['src/sass/main.scss','src/sass/**/*.scss'],//все sass файлы
-				tasks: ['sass:dist', 'autoprefixer:dist', 'cssmin', 'usebanner:css'] //компилирем в css, добавляем префиксы, сжимаем и добавляем баннер
+	'use strict';
+	/**
+	 * Livereload and connect variables
+	 */
+	var LIVERELOAD_PORT = 35729;
+	var lrSnippet = require('connect-livereload')({
+	  port: LIVERELOAD_PORT
+	});
+
+	var mountFolder = function(connect, dir) {
+	  return require('serve-static')(require('path').resolve(dir));
+	};
+
+    require('time-grunt')(grunt);
+    require('load-grunt-tasks')(grunt);
+
+    /**
+	 * Grunt module
+	 */
+    grunt.initConfig({
+    	pkg: grunt.file.readJSON('package.json'),
+    	clean:{
+    		all: [
+		        "dist/css",
+		        "dist/js",
+		        "dist/*.html",
+		        "src/styles/css"
+		    ]
+    	},
+    	connect: { //Starts a local webserver and inject livereload snippet
+			options: {
+				port: 9992,
+				hostname: '*'
 			},
-			livereload: {//перезагружаем браузер при изменениях в файлах
-				files: ['dist/*.html','src/*.html', 'src/templates/*.html', 'src/js/*.js', 'dist/css/*.css','dist/img/**/*.{png,jpg,jpeg,gif,webp,svg}'],
+			livereload: {
 				options: {
-					livereload: true
+				  	middleware: function(connect) {
+				    	return [lrSnippet, mountFolder(connect, 'dist')];
+			  		}
 				}
+			}
+		},
+		open: {
+			server: {
+				path: 'http://localhost:<%= connect.options.port %>'
+			}
+		},
+    	sass:{
+    		dev:{
+    			options: {
+		            outputStyle: 'expanded',
+		            sourceMap: true
+		        },
+		        files: {
+					'dist/css/app.min.css' : 'src/styles/sass/app.scss'
+		        }
+    		},
+    		prod:{
+    			options: {
+		            outputStyle: 'compact',
+		            sourceMap: false
+		        },
+		        files: {
+					'src/styles/css/app-unprefixed.css' : 'src/styles/sass/app.scss'
+		        }
+    		}
+    	},
+    	autoprefixer:{
+    		options: {
+				browsers: [
+				  'last 2 version',
+				  'ie 9'
+				]
 			},
-			scripts: {
-				files: ['src/js/*.js'],
-				tasks: ['concat', 'uglify', 'usebanner:js'],//склеиваем plugin.js & main.js, сжимаем, добавляем баннер
+			dist: {
+				src: 'src/styles/css/app-unprefixed.css',
+				dest:'src/styles/css/app.css'
+			},
+    	},
+    	cssmin:{
+			options: {
+				shorthandCompacting: false,
+				roundingPrecision: -1
+			},
+			target: {
+				files: {
+					'dist/css/app.min.css' : 'src/styles/css/app.css'
+				}
+			}
+    	},
+    	jshint:{
+			options: {
+		        reporter: require('jshint-stylish'),
+		    },
+		    all: [
+		        'src/scripts/*.js'
+		    ]
+    	},
+    	uglify:{
+    		dev:{
+    			options:{
+    				sourceMap: true,
+    				mangle: false
+    			},
+    			files:[
+    				{
+    					expand: true,
+			            cwd: 'src/scripts',
+			            src: '**/*.js',
+			            dest: 'dist/js',
+			            ext: '.min.js'
+    				}
+    			]
+    		},
+    		prod:{
+    			options:{
+    				sourceMap: false
+    			},
+    			files:[
+    				{
+    					expand: true,
+			            cwd: 'src/scripts',
+			            src: '**/*.js',
+			            dest: 'dist/js',
+			            ext: '.min.js'
+    				}
+    			]
+    		}
+    	},
+    	usebanner:{
+    		all:{
+    			options:{
+					position: 'top',
+					banner: '/*!\n' +
+							' * <%= pkg.name %>\n' +
+							' * @author: <%= pkg.author %>\n' +
+							' * @version: <%= pkg.version %>\n' +
+							' * Copyright ' + new Date().getFullYear() +'.\n' +
+							' */\n',
+					linebreak: true
+    			},
+    			files:{
+    				src:[
+    					'dist/css/app.min.css',
+    					'dist/css/app.css',
+    					'dist/js/app.js',
+    					'dist/js/app.min.js'
+    				]
+    			}
+    		}
+    	},
+    	copy:{
+    		prod:{
+    			files:[
+    				{
+    					expand: true,
+						flatten: true,
+						src: 'src/scripts/app.js',
+						dest: 'dist/js'
+    				},
+    				{
+    					expand: true,
+						flatten: true,
+						src: 'src/styles/css/app.css',
+						dest: 'dist/css'
+    				}
+    			]
+    		},
+    		init:{
+    		    files: [
+    				{
+						expand: true,
+						flatten: true,
+						src: 'src/favicons/*',
+						dest: 'dist/'
+					},
+					{
+						expand: true,
+						flatten: true,
+						src: 'src/fonts/*',
+						dest: 'dist/fonts/'
+					}
+    			]
+    		}
+    	},
+    	imagemin:{
+    		all:{
 				options: {
-					spawn: false,
+					optimizationLevel: 7,
+					progressive: true,
+					svgoPlugins: [{ removeViewBox: false }]
 				},
-			},
-			images:{//оптимизируем изображения
-				files: ['src/img/**/*.{png,jpg,gif,svg}'],
+				files: [
+					{
+						expand: true,
+						cwd: 'src/images/img/',
+						src: ['**/*.{png,jpg,gif,svg}'],
+						dest: 'dist/img/'
+					}
+				]
+    		}
+    	},
+    	includereplace: {
+			all: {
+				files:[
+					{	
+						expand: true, 
+						flatten: true,
+						src: 'src/*.html', 
+						dest: 'dist' 
+					}
+				]
+			}
+		},
+    	watch:{
+    		options: {
+		        spawn: false,
+		        livereload: true
+		    },
+		    scripts: {
+		        files: [
+		            'src/scripts/*.js',
+		            'src/scripts/**/*.js'
+		        ],
+		        tasks: [
+		            'newer:jshint',
+		            'newer:uglify'
+		        ]
+		    },
+		    styles: {
+		        files: [
+		            'src/styles/sass/*.scss',
+		            'src/styles/sass/**/*.scss'
+		        ],
+		        tasks: [
+		            'sass:dev'
+		        ]
+		    },
+		    images:{
+				files: ['src/images/img/**/*.{png,jpg,gif,svg}'],
 				tasks:['newer:imagemin'],
 				options: {
 					spawn: false,
 					cache: false
 				},
 			},
-			html:{//собираем html файлы по частям
+			livereload: {
+	        	options: {
+					livereload: LIVERELOAD_PORT
+				},
+				files: [
+					'src/*.html',
+					'src/templates/*.html',
+					'src/js/*.js',
+					'dist/css/*.css',
+					'dist/img/**/*.{png,jpg,jpeg,gif,svg}'
+				]
+			},
+			html:{
 				files: 'src/*.html',
 				tasks:'newer:includereplace',
 				options: {
@@ -39,7 +265,7 @@ module.exports = function(grunt) {
 					cache: false
 				}
 			},
-			templates:{//при обновлении файла в папке templates, пересоберем ВСЕ html-файлы в папке src
+			templates:{
 				files: 'src/templates/*.html',
 				tasks:'includereplace',
 				options: {
@@ -47,190 +273,81 @@ module.exports = function(grunt) {
 					cache: false
 				}
 			}
-		},
-		sass: {
-			options: {
-				sourceMap: false,
-				outputStyle: 'expanded'
-			},
-			dist: {
-				files: {//компилируем sass-файлы в src/css/unprefixed.css
-					'src/css/unprefixed.css': 'src/sass/main.scss'
-				}
-			}
-		},
-		autoprefixer: {//добавляем вендорные префиксы
-			options: {
-				browsers: [
-				  'last 2 version',
-				  'safari 6',
-				  'ie 9',
-				  'ios 6',
-				  'android 4'
-				]
-			},
-			dist: {
-				//src: 'src/css/unprefixed.css',
-				//dest: 'src/css/prefixed.css'
-				files: {
-					'src/css/prefixed.css' : 'src/css/unprefixed.css',
-					'dist/css/app.css' : 'src/css/unprefixed.css'
-				}
-			},
-		},
-		cssmin: {//сжимаем css
-		  options: {
-			shorthandCompacting: false,
-			roundingPrecision: -1
-		  },
-		  target: {
-			files: {
-				'dist/css/app.min.css' : 'src/css/prefixed.css'
-			}
-		  }
-		},
-		concat: {//склеиваем js-файлы
-			dist: {
-				src: [
-					'src/js/plugins.js',
-					'src/js/main.js'
-				],
-				dest: 'dist/js/app.js',
-			}
-		},
-		uglify: {//минимизируем js файлы
-			build: {
-				src: 'dist/js/app.js',
-				dest: 'dist/js/app.min.js'
-			}
-		},
-		imagemin: {//оптимизация изображений
-			dynamic: {
-				png:{
-					options: {
-						optimizationLevel: 4
-				  }
-				},
-				jpg:{
-					options: {
-						progressive: true
-				  }
-				},
-				svg:{
-					options: {
-						svgoPlugins: [{ removeViewBox: false }],
-					},
-				},
-				files: [{
-					expand: true,
-					cwd: 'src/img/',
-					src: ['**/*.{png,jpg,gif,svg}'],
-					dest: 'dist/img/'
-				}]
-			}
-		},
-		tag: {//контент баннера
-		  banner: '/*!\n' +
-			' * <%= pkg.name %>\n' +
-			' * @author: <%= pkg.author %>\n' +
-			' * @version: <%= pkg.version %>\n' +
-			' * Copyright ' + new Date().getFullYear() +'.\n' +
-			' */\n'
-		},
-		usebanner: {//баннер
-		  css: {
-			options: {
-			  position: 'top',
-			  banner: '<%= tag.banner %>',
-			  linebreak: true
-			},
-			files: {
-			  src: ['dist/css/app.min.css']
-			},
-		  },
-		  js: {
-			options: {
-			  position: 'top',
-			  banner: '<%= tag.banner %>',
-			  linebreak: true
-			},
-			files: {
-			  src: [
-				'dist/js/app.min.js',
-				'dist/js/app.js'
-			  ]
-			},
-		  },
-		},
-		newer:{
-			options:{
-				tolerance: 1000
-			}
-		},
-		concurrent: {
-			target1: ['newer:sass:dist', 'newer:concat'],
-			target2: ['newer:autoprefixer:dist', 'newer:uglify'],
-			target3: ['newer:cssmin', 'newer:imagemin'],
-			target4: ['newer:copy', 'newer:includereplace']
-		},
-		copy: {//копируем favicons, jquery & modernizr и шрифты в /dist
-			main:{
-				files: [
-					{
-						//expand: true,
-						//flatten: true,
-						//src: 'src/modernizr/*',
-						//dest: 'dist/js/vendor/'
-					},
-					{
-						//expand: true,
-						//flatten: true,
-						//src: 'bower_components/jquery/dist/jquery.min.js',
-						//dest: 'dist/js/vendor/'
-					},
-					{
-						expand: true,
-						flatten: true,
-						src: 'src/favicon/*',
-						dest: 'dist/'
-					},
-					{
-						//expand: true,
-						//flatten: true,
-						//src: 'src/fonts/*',
-						//dest: 'dist/fonts/'
-					},
-				],
-			},
-		},
-		includereplace: {
-			dist: {
-			  files:[
-				{src: 'src/*.html', dest: 'dist', expand: true, flatten: true}
-			  ]
-			}
-		  }
-	});
+    	},
+    	concurrent: {
+    		options: {
+		        limit: 3
+		    },
+		    // Dev tasks
+		    devFirst: [
+		        'clean',
+		        'jshint'
+		    ],
+		    devSecond: [
+		        'sass:dev',
+		        'uglify:dev',
+		        'includereplace'
+		    ],
+		    // Production tasks
+		    prodFirst: [
+		        'clean',
+		        'jshint'	        
+		    ],
+		    prodSecond: [
+				'sass:prod',
+		        'uglify:prod'	        
+		    ],
+		    prodThird: [
+				'autoprefixer'
+		    ],
+		    prodFourth: [
+				'cssmin',
+		    	'includereplace'
+		    ],
+		    prodFifth: [
+				'copy:prod'
+		    ],
+		    prodSixth: [
+				'usebanner'
+		    ],
+		    // Image tasks
+		    imgFirst: [
+		        'imagemin'
+		    ]
+    	}
+  	});
+
+	grunt.registerTask('default', [
+  		'concurrent:devFirst',
+  		'concurrent:devSecond',
+  		'concurrent:imgFirst',
+  		'copy:init',
+	]);
 	
-	grunt.loadNpmTasks('grunt-sass');
-	grunt.loadNpmTasks('grunt-contrib-watch');
-	grunt.loadNpmTasks('grunt-contrib-concat');
-	grunt.loadNpmTasks('grunt-contrib-uglify');
-	grunt.loadNpmTasks('grunt-contrib-imagemin');
-	grunt.loadNpmTasks('grunt-autoprefixer');
-	grunt.loadNpmTasks('grunt-newer');
-	grunt.loadNpmTasks('grunt-contrib-copy');
-	grunt.loadNpmTasks('grunt-contrib-cssmin');
-	grunt.loadNpmTasks('grunt-banner');
-	grunt.loadNpmTasks('grunt-include-replace');
-	
-	grunt.registerTask('default', ['concurrent:target1', 'concurrent:target2', 'concurrent:target3', 'concurrent:target4', 'watch']);
-	grunt.registerTask('init', ['copy', 'includereplace']);
-	
-	//additional tasks:
-	//grunt copy - for copy faviconts, fonts, jquery & modernizr to .dest folder
-	//grunt usebanner:css - add banner to app.css file only
-	//grunt imagemin - optimize images
-	//grunt includereplace - build html files
-	//...
+  	grunt.registerTask('dev', [
+  		'concurrent:devFirst',
+  		'concurrent:devSecond',
+  		'connect',
+  		'open',
+  		'watch'
+	]);
+
+  	grunt.registerTask('devimg', [
+  		'concurrent:devFirst',
+  		'concurrent:devSecond',
+  		'concurrent:imgFirst',
+  		'connect',
+  		'open',
+  		'watch'
+	]);
+
+  	grunt.registerTask('prod', [
+  		'concurrent:prodFirst',
+  		'concurrent:prodSecond',
+  		'concurrent:prodThird',
+  		'concurrent:prodFourth',
+  		'concurrent:prodFifth',
+  		'concurrent:prodSixth',
+  		'concurrent:imgFirst'
+	]);
 };

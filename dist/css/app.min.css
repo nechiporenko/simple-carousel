@@ -1,8 +1,8 @@
 /*!
- * simple-carousel2
- * @author: Avakandy
- * @version: 0.0.1
+ * simple-carousel
+ * @author: nechiporenko
+ * @version: 1.0.3
  * Copyright 2017.
  */
 
-.b-hslider,.b-vslider{overflow:hidden;position:relative}.b-hslider img,.b-vslider img{display:block;width:100%;height:auto;border:0}.b-hslider__list,.b-vslider__list{position:relative;left:0;right:0;list-style-type:none;padding:0;margin:0;will-change:transform}.b-hslider__list.moved,.b-vslider__list.moved{-webkit-transition-property:-webkit-transform;transition-property:transform;-webkit-transition-duration:1s;transition-duration:1s;-webkit-transition-timing-function:ease-in;transition-timing-function:ease-in}.b-hslider{width:750px;height:150px}.b-hslider__item{float:left;width:250px}.b-vslider{width:300px;height:300px}.b-vslider__item{display:block}
+.b-hslider,.b-vslider{overflow:hidden;position:relative}.b-hslider img,.b-vslider img{display:block;width:100%;height:auto;border:0}.b-hslider__list,.b-vslider__list{position:relative;left:0;right:0;list-style-type:none;padding:0;margin:0;will-change:transform}.b-hslider__list.moved,.b-vslider__list.moved{transition-property:transform;transition-duration:1s;transition-timing-function:ease-in}.b-hslider{width:750px;height:150px}.b-hslider__item{float:left;width:250px}.b-vslider{width:300px;height:300px}.b-vslider__item{display:block}
