@@ -108,13 +108,19 @@
     //--------------------------------------------------------------------------------------------------------------------------
     //подключаем слайдеры на странице, параметры передаем через data-атрибуты (см. html-разметку)
     var slider1 = new Carousel(document.getElementById('crsl01'));
-    slider1.init();
+    if (slider1) {
+        slider1.init();
+    }
 
     var slider2 = new Carousel(document.getElementById('crsl02'));
-    slider2.init();
+    if (slider2) {
+        slider2.init();
+    }
 
     var slider3 = new Carousel(document.getElementById('crsl03'));
-    slider3.init();
+    if (slider3) {
+        slider3.init();
+    }
 })();
 
 
